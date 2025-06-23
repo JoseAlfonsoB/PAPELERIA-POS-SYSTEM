@@ -250,41 +250,67 @@ if (isset($_GET['delete_id'])) {
         }
 
         // Manejar envío del formulario de edición
-        document.getElementById('editProductForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const productData = {
-                id: document.getElementById('editProductId').value,
-                nombre: document.getElementById('editProductName').value,
-                precio: document.getElementById('editProductPrice').value,
-                stock: document.getElementById('editProductStock').value,
-                min_stock: document.getElementById('editProductMinStock').value,
-                max_stock: document.getElementById('editProductMaxStock').value
-            };
-            
-            // Enviar datos al servidor
-            fetch('includes/functions.php?action=updateProduct', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(productData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Producto actualizado correctamente');
-                    closeModal('editModal');
-                    window.location.reload();
-                } else {
-                    alert(data.error || 'Error al actualizar el producto');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error al actualizar el producto');
-            });
-        });
+document.getElementById('editProductForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const productData = {
+        id: document.getElementById('editProductId').value,
+        nombre: document.getElementById('editProductName').value,
+        precio: document.getElementById('editProductPrice').value,
+        stock: document.getElementById('editProductStock').value,
+        min_stock: document.getElementById('editProductMinStock').value,
+        max_stock: document.getElementById('editProductMaxStock').value
+    };
+    
+    // Validaciones de stock
+    const minStock = parseInt(productData.min_stock);
+    const maxStock = parseInt(productData.max_stock);
+    const currentStock = parseInt(productData.stock);
+    
+    // Validar valores mínimos
+    if (minStock < 5) {
+        alert('El stock mínimo no puede ser menor a 5');
+        return;
+    }
+    
+    if (maxStock > 50) {
+        alert('El stock máximo no puede ser mayor a 50');
+        return;
+    }
+    
+    if (minStock > maxStock) {
+        alert('El stock mínimo no puede ser mayor que el stock máximo');
+        return;
+    }
+    
+    if (currentStock < minStock || currentStock > maxStock) {
+        alert('El stock actual debe estar entre el mínimo (' + minStock + ') y el máximo (' + maxStock + ')');
+        return;
+    }
+    
+    // Enviar datos al servidor
+    fetch('includes/functions.php?action=updateProduct', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(productData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Producto actualizado correctamente');
+            closeModal('editModal');
+            window.location.reload();
+        } else {
+            alert(data.error || 'Error al actualizar el producto');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al actualizar el producto');
+    });
+});
 
         // Función para abrir modal de agregar producto
 function openAddProductModal() {

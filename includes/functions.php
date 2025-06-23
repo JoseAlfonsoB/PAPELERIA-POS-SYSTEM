@@ -31,6 +31,32 @@ if (isset($_GET['action'])) {
     elseif ($_GET['action'] == 'updateProduct') {
         $data = json_decode(file_get_contents('php://input'), true);
         
+        // Validar valores de stock
+                $minStock = intval($data['min_stock']);
+        $maxStock = intval($data['max_stock']);
+        $currentStock = intval($data['stock']);
+        
+        if ($minStock < 5) {
+            echo json_encode(['error' => 'El stock mínimo no puede ser menor a 5']);
+            exit();
+        }
+        
+        if ($maxStock > 50) {
+            echo json_encode(['error' => 'El stock máximo no puede ser mayor a 50']);
+            exit();
+        }
+        
+        if ($minStock > $maxStock) {
+            echo json_encode(['error' => 'El stock mínimo no puede ser mayor que el stock máximo']);
+            exit();
+        }
+        
+        if ($currentStock < $minStock || $currentStock > $maxStock) {
+            echo json_encode(['error' => 'El stock actual debe estar entre el mínimo y el máximo']);
+            exit();
+        }
+
+
         $query = "UPDATE productos SET 
                   nombre_producto = ?, 
                   precio_unitario = ?, 
