@@ -33,26 +33,9 @@ include 'includes/connection.php';
             <form id="supplierForm">
                 <div class="form-row">
                     <div class="form-col">
-                        <label for="proveedor">Proveedor:</label>
-                        <select id="proveedor" name="proveedor" required>
-                            <option value="">Seleccione un proveedor</option>
-                            <?php
-                            $query = "SELECT id_proveedor, nombre_proveedor FROM proveedores ORDER BY nombre_proveedor";
-                            $result = $conn->query($query);
-                            
-                            while ($row = $result->fetch_assoc()) {
-                                echo "<option value='{$row['id_proveedor']}'>{$row['nombre_proveedor']}</option>";
-                            }
-                            ?>
-                        </select>
-                    </div>
-                    <div class="form-col">
                         <label for="fecha">Fecha de Compra:</label>
-                        <input type="date" id="fecha" name="fecha" required>
+                        <input type="date" id="fecha" name="fecha" required value="<?php echo date('Y-m-d'); ?>">
                     </div>
-                </div>
-
-                <div class="form-row">
                     <div class="form-col">
                         <label for="producto">Producto:</label>
                         <select id="producto" name="producto" required>
@@ -67,35 +50,41 @@ include 'includes/connection.php';
                             ?>
                         </select>
                     </div>
+                </div>
+
+                <div class="form-row">
                     <div class="form-col">
                         <label for="cantidad">Cantidad:</label>
                         <input type="number" id="cantidad" name="cantidad" min="1" required>
                     </div>
-                </div>
-
-                <div class="form-row">
                     <div class="form-col">
                         <label for="precio">Precio Unitario:</label>
                         <input type="number" id="precio" name="precio" step="0.01" min="0" required>
                     </div>
+                </div>
+
+                <div class="form-row">
                     <div class="form-col">
                         <label for="stockActual">Stock Actual:</label>
                         <input type="number" id="stockActual" name="stockActual" readonly>
+                    </div>
+                    <div class="form-col">
+                        <label for="stockMaximo">Stock Máximo:</label>
+                        <input type="number" id="stockMaximo" name="stockMaximo" readonly>
                     </div>
                 </div>
 
                 <div class="form-row">
                     <div class="form-col">
-                        <label for="stockMaximo">Stock Máximo:</label>
-                        <input type="number" id="stockMaximo" name="stockMaximo" readonly>
-                    </div>
-                    <div class="form-col">
                         <label for="nuevoStock">Nuevo Stock:</label>
                         <input type="number" id="nuevoStock" name="nuevoStock" readonly>
                     </div>
+                    <div class="form-col">
+                        <!-- Espacio vacío para mantener el diseño -->
+                        <label style="visibility: hidden;">Acción</label>
+                        <button type="submit" style="margin-top: 0;">Registrar Compra</button>
+                    </div>
                 </div>
-
-                <button type="submit">Registrar Compra</button>
             </form>
         </div>
 
@@ -105,7 +94,6 @@ include 'includes/connection.php';
                 <thead>
                     <tr>
                         <th>Fecha</th>
-                        <th>Proveedor</th>
                         <th>Producto</th>
                         <th>Cantidad</th>
                         <th>Precio Unitario</th>
@@ -114,10 +102,9 @@ include 'includes/connection.php';
                 </thead>
                 <tbody>
                     <?php
-                    $query = "SELECT cp.fecha_compra, pr.nombre_proveedor, p.nombre_producto, 
+                    $query = "SELECT cp.fecha_compra, p.nombre_producto, 
                              dc.cantidad, dc.precio_unitario, dc.subtotal
                              FROM compras_proveedor cp
-                             JOIN proveedores pr ON cp.id_proveedor = pr.id_proveedor
                              JOIN detalle_compra dc ON cp.id_compra = dc.id_compra
                              JOIN productos p ON dc.id_producto = p.id_producto
                              ORDER BY cp.fecha_compra DESC
@@ -127,7 +114,6 @@ include 'includes/connection.php';
                     while ($row = $result->fetch_assoc()) {
                         echo "<tr>
                                 <td>{$row['fecha_compra']}</td>
-                                <td>{$row['nombre_proveedor']}</td>
                                 <td>{$row['nombre_producto']}</td>
                                 <td>{$row['cantidad']}</td>
                                 <td>$" . number_format($row['precio_unitario'], 2) . "</td>
@@ -150,9 +136,17 @@ include 'includes/connection.php';
                 fetch(`includes/functions.php?action=getProductInfo&id=${productId}`)
                     .then(response => response.json())
                     .then(data => {
+                        if (data.error) {
+                            alert(data.error);
+                            return;
+                        }
                         document.getElementById('stockActual').value = data.stock_actual;
                         document.getElementById('stockMaximo').value = data.stock_maximo;
                         calculateNewStock();
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Error al obtener información del producto');
                     });
             } else {
                 document.getElementById('stockActual').value = '';
@@ -172,29 +166,74 @@ include 'includes/connection.php';
             const nuevoStock = stockActual + cantidad;
             document.getElementById('nuevoStock').value = nuevoStock;
             
+            // Resaltar si excede el stock máximo
             if (nuevoStock > stockMaximo) {
-                document.getElementById('nuevoStock').style.backgroundColor = '#ffdddd';
+                document.getElementById('nuevoStock').classList.add('error-input');
             } else {
-                document.getElementById('nuevoStock').style.backgroundColor = '';
+                document.getElementById('nuevoStock').classList.remove('error-input');
             }
         }
         
-        // Validar formulario antes de enviar
+        // Enviar formulario al servidor
         document.getElementById('supplierForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
-            const stockActual = parseInt(document.getElementById('stockActual').value) || 0;
-            const cantidad = parseInt(document.getElementById('cantidad').value) || 0;
-            const stockMaximo = parseInt(document.getElementById('stockMaximo').value) || 0;
+            const productId = document.getElementById('producto').value;
+            const cantidad = parseInt(document.getElementById('cantidad').value);
+            const precio = parseFloat(document.getElementById('precio').value);
+            const stockActual = parseInt(document.getElementById('stockActual').value);
+            const stockMaximo = parseInt(document.getElementById('stockMaximo').value);
+            const nuevoStock = stockActual + cantidad;
             
-            if (stockActual + cantidad > stockMaximo) {
+            // Validaciones
+            if (!productId) {
+                alert('Seleccione un producto');
+                return;
+            }
+            
+            if (isNaN(cantidad)) {
+                alert('Ingrese una cantidad válida');
+                return;
+            }
+            
+            if (nuevoStock > stockMaximo) {
                 alert('La cantidad ingresada excede el stock máximo permitido para este producto');
                 return;
             }
             
-            // Aquí iría la lógica para enviar el formulario al servidor
-            alert('Compra registrada con éxito!');
-            this.reset();
+            // Preparar datos para enviar
+            const formData = {
+                producto_id: productId,
+                cantidad: cantidad,
+                precio: precio,
+                fecha: document.getElementById('fecha').value
+            };
+            
+            // Enviar al servidor
+            fetch('includes/functions.php?action=registerPurchase', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Compra registrada con éxito!');
+                    // Actualizar los campos de stock
+                    document.getElementById('stockActual').value = nuevoStock;
+                    calculateNewStock();
+                    // Recargar el historial de compras
+                    location.reload();
+                } else {
+                    alert(data.error || 'Error al registrar la compra');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al conectar con el servidor');
+            });
         });
     </script>
 </body>

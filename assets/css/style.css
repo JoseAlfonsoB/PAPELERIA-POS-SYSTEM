@@ -711,3 +711,12 @@ table tr:hover {
   margin: 5px 0;
   text-align: right;
 }
+
+.error-input {
+    background-color: #ffdddd;
+    border-color: #ff9999;
+}
+
+.form-row .form-col:last-child button {
+    margin-top: 23px; /* Alinea verticalmente con los otros campos */
+}
